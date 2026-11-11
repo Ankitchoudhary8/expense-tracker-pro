@@ -1,4 +1,9 @@
 const $ = selector => document.querySelector(selector);
+const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+const secureFetch = (url, options = {}) => fetch(url, {
+  ...options,
+  headers: {...(options.headers || {}), "X-CSRF-Token": csrfToken}
+});
 const money = value => new Intl.NumberFormat("en-IN", {style:"currency", currency:"INR", maximumFractionDigits:2}).format(value);
 const compact = value => new Intl.NumberFormat("en-IN", {notation:"compact", maximumFractionDigits:1}).format(value);
 const palette = ["#3657b7","#5f82e8","#25a69a","#f4aa4a","#8b65ce","#e67d89"];
@@ -74,19 +79,19 @@ function render() {
   });
 }
 async function loadExpenses(){
-  try{const response=await fetch("/api/expenses");if(!response.ok)throw Error("Could not load expenses.");
+  try{const response=await secureFetch("/api/expenses");if(!response.ok)throw Error("Could not load expenses.");
     allExpenses=await response.json();render();
   }catch(error){$("#message").textContent=error.message;}
 }
 async function removeExpense(id){
-  try{const response=await fetch("/api/expenses/"+id,{method:"DELETE"});if(!response.ok)throw Error("Could not delete expense.");
+  try{const response=await secureFetch("/api/expenses/"+id,{method:"DELETE"});if(!response.ok)throw Error("Could not delete expense.");
     $("#message").textContent="";await loadExpenses();
   }catch(error){$("#message").textContent=error.message;}
 }
 $("#expense-form").addEventListener("submit",async event=>{
   event.preventDefault();$("#message").textContent="";
   const payload={title:$("#title").value.trim(),amount:Number($("#amount").value),category:$("#category").value,date:$("#date").value};
-  try{const response=await fetch(editingId===null?"/api/expenses":"/api/expenses/"+editingId,{method:editingId===null?"POST":"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+  try{const response=await secureFetch(editingId===null?"/api/expenses":"/api/expenses/"+editingId,{method:editingId===null?"POST":"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
     const result=await response.json();if(!response.ok)throw Error(result.error||"Could not add expense.");
     resetEdit();await loadExpenses();
   }catch(error){$("#message").textContent=error.message;}
@@ -121,7 +126,7 @@ async function loadBudget(){
   const month=budgetMonth();
   $("#budget-month-label").textContent=month;
   try{
-    const response=await fetch("/api/budgets/"+month);
+    const response=await secureFetch("/api/budgets/"+month);
     if(!response.ok)throw Error("Could not load budget.");
     const result=await response.json();
     if(month!==budgetMonth())return;
@@ -145,7 +150,7 @@ $("#budget-form").addEventListener("submit",async event=>{
   event.preventDefault();
   const month=budgetMonth(),amount=Number($("#budget-amount").value);
   try{
-    const response=await fetch("/api/budgets/"+month,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({amount})});
+    const response=await secureFetch("/api/budgets/"+month,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({amount})});
     const result=await response.json();if(!response.ok)throw Error(result.error||"Could not save budget.");
     activeBudget=result.amount;renderBudget();
   }catch(error){$("#budget-warning").textContent=error.message;}
