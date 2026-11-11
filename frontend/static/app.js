@@ -3,7 +3,9 @@ const money = value => new Intl.NumberFormat("en-IN", {style:"currency", currenc
 const compact = value => new Intl.NumberFormat("en-IN", {notation:"compact", maximumFractionDigits:1}).format(value);
 const palette = ["#3657b7","#5f82e8","#25a69a","#f4aa4a","#8b65ce","#e67d89"];
 const categories = ["Food","Transport","Shopping","Bills","Education","Other"];
-let allExpenses = [];\nlet editingId = null;\nlet activeBudget = null;
+let allExpenses = [];
+let editingId = null;
+let activeBudget = null;
 const localToday = () => {const d = new Date(); return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");};
 $("#date").value = localToday();
 $("#month-filter").value = localToday().slice(0,7);
