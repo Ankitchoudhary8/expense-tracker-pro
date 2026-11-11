@@ -1,59 +1,102 @@
 # Expense Tracker Pro 💸
 
-A responsive expense-tracking dashboard built with **Python, Flask, SQLite, HTML, CSS, and JavaScript**.
+A responsive full-stack personal finance dashboard built with **Python, Flask, SQLite, HTML, CSS, and JavaScript**.
+
+## 🌐 Live Demo
+
+**[Open Expense Tracker Pro](https://expense-tracker-pro-1-595b.onrender.com)**
+
+> The hosted application requires sign-in. Use your own authorized credentials; never publish passwords or secret keys.
 
 ## Features
-- Add, edit, and delete expenses with categories and dates
-- Set a monthly spending budget, track progress, and receive 80% / over-budget warnings
-- View spending totals, transaction counts, and average expense
-- Filter expenses by month and category
-- Interactive category breakdown donut chart and six-month spending bars
-- Export filtered expenses as a CSV report
-- Local SQLite storage and REST API
 
-## Run locally (Windows)
+- Add, edit, and delete expenses with categories and dates
+- Monthly budget tracking and spending alerts
+- Transaction counts, totals, and average expense
+- Month and category filters
+- Category donut chart and six-month spending visualization
+- CSV export
+- Responsive frontend
+- Login/logout protection for the hosted application
+
+## Tech Stack
+
+| Layer | Technology |
+| --- | --- |
+| Backend | Python, Flask |
+| Frontend | HTML, CSS, JavaScript |
+| Database | SQLite |
+| Production server | Gunicorn |
+| Hosting | Render |
+| CI | GitHub Actions |
+
+## Screenshots
+
+Screenshots will be added to the `screenshots/` folder after capturing the deployed interface with non-sensitive sample data.
+
+## Local Setup
+
 ```powershell
 git clone https://github.com/Ankitchoudhary8/expense-tracker-pro.git
 cd expense-tracker-pro
 py -m pip install -r backend/requirements.txt
 py backend/app.py
 ```
-Open http://127.0.0.1:5000 in your browser.
 
-If you already cloned the project, stop the server with Ctrl+C, run `git pull origin main` inside the project folder, and restart with `py backend/app.py`. Your local SQLite database is not overwritten.
+Open http://127.0.0.1:5000. Configure authentication environment variables required by your version of `backend/app.py` before starting it. Do not commit credentials.
 
-## Structure
+## Run Tests
+
+```powershell
+py -m unittest discover -s tests -v
+```
+
+## Project Structure
+
 ```text
 backend/
   app.py
   database.py
   requirements.txt
 frontend/
-  templates/index.html
-  static/app.js
-  static/style.css
+  templates/
+  static/
+tests/
+.github/workflows/
+Procfile
+DEPLOYMENT.md
 ```
 
 ## API
+
 - `GET /api/expenses` — list expenses
 - `POST /api/expenses` — create expense
-- `DELETE /api/expenses/<id>` — delete expense
 - `PUT /api/expenses/<id>` — edit expense
+- `DELETE /api/expenses/<id>` — delete expense
 - `GET /api/budgets/<YYYY-MM>` — read a monthly budget
 - `PUT /api/budgets/<YYYY-MM>` — save a monthly budget
 
-The dashboard charts and CSV export are computed in the browser from the API data. The SQLite file `backend/expenses.db` is ignored by Git.
+Mutating endpoints should be accessed through the authenticated interface.
 
-## Roadmap
-- [x] Phase 1: Flask API, SQLite and expense entry
-- [x] Phase 2: Dashboard, category chart, monthly report and CSV export
-- [x] Phase 3: Expense editing, monthly budgets, alerts and API tests
-- [x] Phase 4: CI and deployment configuration
-- [ ] Production launch: authentication, durable storage, and live hosting
+## Deployment and Data Persistence
 
-**Deployment status:** CI and production-server configuration are committed; no public site has been launched. The current app has **no authentication**, so do not expose real financial records on a public URL. See [DEPLOYMENT.md](DEPLOYMENT.md) for security and storage requirements.\n\n[GitHub Actions CI](https://github.com/Ankitchoudhary8/expense-tracker-pro/actions) runs API tests and syntax checks on pushes and pull requests.
+The app is deployed as a Render **Web Service**, not a static site. See [DEPLOYMENT.md](DEPLOYMENT.md) for configuration and security considerations.
 
-## Run tests
-```powershell
-py -m unittest discover -s tests -v
-```
+**Important:** The default SQLite database lives on the service filesystem. Render instances without persistent storage can lose SQLite data during redeploys or restarts. Use durable storage or migrate to a managed database before relying on the app for real financial records.
+
+## Project Roadmap
+
+- [x] Phase 1 — Flask API and expense entry
+- [x] Phase 2 — Dashboard, charts, filters and CSV export
+- [x] Phase 3 — Editing, budgets, alerts and tests
+- [x] Phase 4 — CI and deployment configuration
+- [x] Phase 5 — Live demo and portfolio documentation
+- [ ] Verify all final user journeys and budget calculations
+- [ ] Add sanitized application screenshots
+- [ ] Configure durable database storage
+
+## Links
+
+- **Live app:** https://expense-tracker-pro-1-595b.onrender.com
+- **CI:** https://github.com/Ankitchoudhary8/expense-tracker-pro/actions
+- **Developer:** https://github.com/Ankitchoudhary8
