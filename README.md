@@ -1,75 +1,48 @@
 # Expense Tracker Pro 💸
 
-A full-stack expense tracker built with **Python, Flask, SQLite, HTML, CSS, and JavaScript**. Track expenses in Indian rupees with a responsive dashboard.
+A responsive expense-tracking dashboard built with **Python, Flask, SQLite, HTML, CSS, and JavaScript**.
 
 ## Features
-- Add expenses with title, amount, category, and date
-- View expenses ordered by date
-- See total spending in INR
-- Delete expenses
-- Store expenses locally using SQLite
-- Responsive design for mobile and desktop
-- JSON REST API with basic input validation
+- Add and delete expenses with categories and dates
+- View spending totals, transaction counts, and average expense
+- Filter expenses by month and category
+- Interactive category breakdown donut chart and six-month spending bars
+- Export filtered expenses as a CSV report
+- Local SQLite storage and REST API
 
-## Project structure
-```text
-expense-tracker-pro/
-├── backend/
-│   ├── app.py
-│   ├── database.py
-│   └── requirements.txt
-├── frontend/
-│   ├── templates/index.html
-│   └── static/
-│       ├── app.js
-│       └── style.css
-├── .gitignore
-└── README.md
+## Run locally (Windows)
+```powershell
+git clone https://github.com/Ankitchoudhary8/expense-tracker-pro.git
+cd expense-tracker-pro
+py -m pip install -r backend/requirements.txt
+py backend/app.py
 ```
+Open http://127.0.0.1:5000 in your browser.
 
-## Run locally (Windows / VS Code)
-1. Install Python 3.10+ and Git.
-2. Clone and open the project:
-   ```powershell
-   git clone https://github.com/Ankitchoudhary8/expense-tracker-pro.git
-   cd expense-tracker-pro
-   code .
-   ```
-3. Create a virtual environment and install dependencies:
-   ```powershell
-   py -m venv .venv
-   .\.venv\Scripts\Activate.ps1
-   pip install -r backend/requirements.txt
-   ```
-   If PowerShell blocks activation, use `cmd` and run `.venv\Scripts\activate.bat` instead.
-4. Start the app:
-   ```powershell
-   python backend/app.py
-   ```
-5. Open **http://127.0.0.1:5000** in your browser.
+If you already cloned the project, stop the server with Ctrl+C, run `git pull origin main` inside the project folder, and restart with `py backend/app.py`. Your local SQLite database is not overwritten.
 
-The SQLite database is created automatically at `backend/expenses.db` and is excluded from Git.
+## Structure
+```text
+backend/
+  app.py
+  database.py
+  requirements.txt
+frontend/
+  templates/index.html
+  static/app.js
+  static/style.css
+```
 
 ## API
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| GET | `/api/expenses` | List expenses |
-| POST | `/api/expenses` | Add an expense |
-| DELETE | `/api/expenses/<id>` | Delete an expense |
+- `GET /api/expenses` — list expenses
+- `POST /api/expenses` — create expense
+- `DELETE /api/expenses/<id>` — delete expense
 
-Example POST body:
-```json
-{"title":"Lunch","amount":150,"category":"Food","date":"2026-11-11"}
-```
+The dashboard charts and CSV export are computed in the browser from the API data. The SQLite file `backend/expenses.db` is ignored by Git.
 
 ## Roadmap
-- [x] Flask API and SQLite storage
-- [x] Expense form and list
-- [x] Total spending dashboard
-- [ ] Filter by month/category
-- [ ] Category breakdown charts
-- [ ] CSV export
-- [ ] Automated tests and deployment
+- [x] Phase 1: Flask API, SQLite and expense entry
+- [x] Phase 2: Dashboard, category chart, monthly report and CSV export
+- [ ] Phase 3: Editing, budgets, automated tests and deployment
 
-## Note
-This is a learning/portfolio project. The development server is not intended for production deployment.
+**Development only:** Flask's built-in debug server is not intended for production use.
