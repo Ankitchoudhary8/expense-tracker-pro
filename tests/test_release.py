@@ -118,6 +118,35 @@ class ReleaseVerificationTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "Mount persistent storage"):
                     database.init_db()
 
+    def test_postgres_adapter_parameter_binding_and_generated_id(self):
+        class Cursor:
+            rowcount = 1
+            def fetchone(self):
+                return {"id": 42}
+        class Raw:
+            def __init__(self):
+                self.calls = []
+                self.commits = 0
+            def execute(self, sql, params=()):
+                self.calls.append((sql, params))
+                return Cursor()
+            def commit(self):
+                self.commits += 1
+        raw = Raw()
+        adapter = database.PostgresConnection(raw)
+        inserted = adapter.execute(
+            "INSERT INTO expenses (title, amount, category, date) VALUES (?, ?, ?, ?)",
+            ("Lunch", 25, "Food", "2026-11-11")
+        )
+        self.assertEqual(inserted.lastrowid, 42)
+        self.assertIn("RETURNING id", raw.calls[0][0])
+        self.assertIn("%s", raw.calls[0][0])
+        self.assertEqual(raw.calls[0][1][0], "Lunch")
+        adapter.execute("DELETE FROM expenses WHERE id = ?", (42,))
+        self.assertIn("%s", raw.calls[1][0])
+        adapter.commit()
+        self.assertEqual(raw.commits, 1)
+
     def test_security_cookie_configuration(self):
         self.assertTrue(application.app.config["SESSION_COOKIE_HTTPONLY"])
         self.assertEqual(application.app.config["SESSION_COOKIE_SAMESITE"], "Lax")
