@@ -6,3 +6,6 @@ venv/
 backend/expenses.db
 .DS_Store
 .vscode/
+
+# Private local expense and budget migration backups
+migration_backup/
