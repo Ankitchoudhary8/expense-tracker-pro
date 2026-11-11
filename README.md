@@ -3,7 +3,8 @@
 A responsive expense-tracking dashboard built with **Python, Flask, SQLite, HTML, CSS, and JavaScript**.
 
 ## Features
-- Add and delete expenses with categories and dates
+- Add, edit, and delete expenses with categories and dates
+- Set a monthly spending budget, track progress, and receive 80% / over-budget warnings
 - View spending totals, transaction counts, and average expense
 - Filter expenses by month and category
 - Interactive category breakdown donut chart and six-month spending bars
@@ -37,12 +38,21 @@ frontend/
 - `GET /api/expenses` — list expenses
 - `POST /api/expenses` — create expense
 - `DELETE /api/expenses/<id>` — delete expense
+- `PUT /api/expenses/<id>` — edit expense
+- `GET /api/budgets/<YYYY-MM>` — read a monthly budget
+- `PUT /api/budgets/<YYYY-MM>` — save a monthly budget
 
 The dashboard charts and CSV export are computed in the browser from the API data. The SQLite file `backend/expenses.db` is ignored by Git.
 
 ## Roadmap
 - [x] Phase 1: Flask API, SQLite and expense entry
 - [x] Phase 2: Dashboard, category chart, monthly report and CSV export
-- [ ] Phase 3: Editing, budgets, automated tests and deployment
+- [x] Phase 3: Expense editing, monthly budgets, alerts and API tests
+- [ ] Phase 4: Deployment and CI/CD
 
 **Development only:** Flask's built-in debug server is not intended for production use.
+
+## Run tests
+```powershell
+py -m unittest discover -s tests -v
+```
