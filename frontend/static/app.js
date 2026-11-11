@@ -1,75 +1,102 @@
-const form = document.querySelector("#expense-form");
-const list = document.querySelector("#expenses");
-const total = document.querySelector("#total");
-const message = document.querySelector("#message");
-const dateInput = document.querySelector("#date");
-dateInput.value = new Date().toLocaleDateString("en-CA");
-const money = value => new Intl.NumberFormat("en-IN", {style:"currency",currency:"INR"}).format(value);
+const $ = selector => document.querySelector(selector);
+const money = value => new Intl.NumberFormat("en-IN", {style:"currency", currency:"INR", maximumFractionDigits:2}).format(value);
+const compact = value => new Intl.NumberFormat("en-IN", {notation:"compact", maximumFractionDigits:1}).format(value);
+const palette = ["#3657b7","#5f82e8","#25a69a","#f4aa4a","#8b65ce","#e67d89"];
+const categories = ["Food","Transport","Shopping","Bills","Education","Other"];
+let allExpenses = [];
+const localToday = () => {const d = new Date(); return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");};
+$("#date").value = localToday();
+$("#month-filter").value = localToday().slice(0,7);
 
-async function loadExpenses() {
-  try {
-    const response = await fetch("/api/expenses");
-    if (!response.ok) throw new Error("Could not load expenses.");
-    const expenses = await response.json();
-    total.textContent = money(expenses.reduce((sum, item) => sum + item.amount, 0));
-    list.replaceChildren();
-    if (!expenses.length) {
-      const empty = document.createElement("p");
-      empty.className = "empty";
-      empty.textContent = "No expenses yet. Add your first expense!";
-      list.append(empty);
-    }
-    expenses.forEach(item => {
-      const row = document.createElement("div");
-      row.className = "expense";
-      const info = document.createElement("div");
-      const name = document.createElement("strong");
-      name.textContent = item.title;
-      const detail = document.createElement("small");
-      detail.textContent = item.category + " • " + item.date;
-      info.append(name, detail);
-      const right = document.createElement("div");
-      right.className = "right";
-      const amount = document.createElement("strong");
-      amount.textContent = money(item.amount);
-      const button = document.createElement("button");
-      button.className = "delete";
-      button.textContent = "Delete";
-      button.addEventListener("click", () => removeExpense(item.id));
-      right.append(amount, button);
-      row.append(info, right);
-      list.append(row);
-    });
-  } catch (error) { message.textContent = error.message; }
+function filteredExpenses() {
+  const month = $("#month-filter").value;
+  const category = $("#category-filter").value;
+  return allExpenses.filter(item => (!month || item.date.startsWith(month)) && (!category || item.category === category));
 }
-
-async function removeExpense(id) {
-  try {
-    const response = await fetch("/api/expenses/" + id, {method:"DELETE"});
-    if (!response.ok) throw new Error("Could not delete expense.");
-    message.textContent = "";
-    await loadExpenses();
-  } catch (error) { message.textContent = error.message; }
+function drawCategoryChart(items) {
+  const totals = categories.map((category,i) => ({category,color:palette[i],amount:items.filter(x=>x.category===category).reduce((sum,x)=>sum+x.amount,0)})).filter(x=>x.amount>0);
+  const grand = totals.reduce((sum,x)=>sum+x.amount,0);
+  let offset = 0;
+  const stops = totals.map(x => {const start=offset;offset+=x.amount/grand*100;return x.color+" "+start+"% "+offset+"%";});
+  $("#donut").style.background = stops.length ? "conic-gradient("+stops.join(",")+")" : "#e7ebf4";
+  $("#donut").setAttribute("aria-label",totals.length ? totals.map(x=>x.category+": "+money(x.amount)).join(", ") : "No spending");
+  $("#donut-total").textContent = money(grand);
+  $("#legend").replaceChildren();
+  if(!totals.length){const p=document.createElement("p");p.className="empty";p.textContent="No expenses for this selection.";$("#legend").append(p);}
+  totals.forEach(x=>{
+    const row=document.createElement("div");row.className="legend-row";
+    const name=document.createElement("span");name.className="legend-name";
+    const swatch=document.createElement("span");swatch.className="swatch";swatch.style.background=x.color;
+    name.append(swatch,document.createTextNode(x.category));
+    const value=document.createElement("strong");value.textContent=Math.round(x.amount/grand*100)+"%";
+    row.append(name,value);$("#legend").append(row);
+  });
 }
-
-form.addEventListener("submit", async event => {
-  event.preventDefault();
-  message.textContent = "";
-  const payload = {
-    title: document.querySelector("#title").value.trim(),
-    amount: Number(document.querySelector("#amount").value),
-    category: document.querySelector("#category").value,
-    date: dateInput.value
-  };
-  try {
-    const response = await fetch("/api/expenses", {
-      method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload)
-    });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || "Could not add expense.");
-    form.reset();
-    dateInput.value = new Date().toLocaleDateString("en-CA");
-    await loadExpenses();
-  } catch (error) { message.textContent = error.message; }
+function drawMonthlyChart() {
+  const selected = $("#month-filter").value;
+  const anchor = selected ? new Date(selected+"-01T12:00:00") : new Date();
+  const months = Array.from({length:6},(_,i)=>{
+    const d = new Date(anchor.getFullYear(),anchor.getMonth()-5+i,1);
+    const key = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+    const category=$("#category-filter").value;
+    return {label:d.toLocaleDateString("en-IN",{month:"short"}),key,amount:allExpenses.filter(x=>x.date.startsWith(key)&&(!category||x.category===category)).reduce((s,x)=>s+x.amount,0)};
+  });
+  const max = Math.max(1,...months.map(x=>x.amount));
+  $("#monthly-chart").replaceChildren();
+  $("#monthly-chart").setAttribute("aria-label",months.map(x=>x.key+": "+money(x.amount)).join(", "));
+  months.forEach(x=>{
+    const col=document.createElement("div");col.className="month-col";
+    const value=document.createElement("span");value.className="value";value.textContent="₹"+compact(x.amount);
+    const space=document.createElement("div");space.className="bar-space";
+    const bar=document.createElement("div");bar.className="bar";bar.style.height=(x.amount/max*100)+"%";bar.title=x.key+": "+money(x.amount);
+    space.append(bar);const label=document.createElement("small");label.textContent=x.label;
+    col.append(value,space,label);$("#monthly-chart").append(col);
+  });
+}
+function render() {
+  const items=filteredExpenses(), sum=items.reduce((s,x)=>s+x.amount,0);
+  $("#total").textContent=money(sum);$("#count").textContent=String(items.length);$("#average").textContent=money(items.length?sum/items.length:0);
+  $("#results-label").textContent=items.length+" transaction"+(items.length===1?"":"s");
+  drawCategoryChart(items);drawMonthlyChart();
+  $("#expenses").replaceChildren();
+  if(!items.length){const p=document.createElement("p");p.className="empty";p.textContent="No expenses match your filters.";$("#expenses").append(p);}
+  items.forEach(item=>{
+    const row=document.createElement("div");row.className="expense";
+    const info=document.createElement("div"),name=document.createElement("strong"),detail=document.createElement("small");
+    name.textContent=item.title;detail.textContent=item.category+" • "+item.date;info.append(name,detail);
+    const right=document.createElement("div");right.className="right";
+    const amount=document.createElement("strong");amount.textContent=money(item.amount);
+    const button=document.createElement("button");button.className="delete";button.textContent="Delete";
+    button.addEventListener("click",()=>removeExpense(item.id));right.append(amount,button);row.append(info,right);$("#expenses").append(row);
+  });
+}
+async function loadExpenses(){
+  try{const response=await fetch("/api/expenses");if(!response.ok)throw Error("Could not load expenses.");
+    allExpenses=await response.json();render();
+  }catch(error){$("#message").textContent=error.message;}
+}
+async function removeExpense(id){
+  try{const response=await fetch("/api/expenses/"+id,{method:"DELETE"});if(!response.ok)throw Error("Could not delete expense.");
+    $("#message").textContent="";await loadExpenses();
+  }catch(error){$("#message").textContent=error.message;}
+}
+$("#expense-form").addEventListener("submit",async event=>{
+  event.preventDefault();$("#message").textContent="";
+  const payload={title:$("#title").value.trim(),amount:Number($("#amount").value),category:$("#category").value,date:$("#date").value};
+  try{const response=await fetch("/api/expenses",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+    const result=await response.json();if(!response.ok)throw Error(result.error||"Could not add expense.");
+    $("#expense-form").reset();$("#date").value=localToday();await loadExpenses();
+  }catch(error){$("#message").textContent=error.message;}
+});
+$("#month-filter").addEventListener("change",render);
+$("#category-filter").addEventListener("change",render);
+$("#clear-filters").addEventListener("click",()=>{$("#month-filter").value="";$("#category-filter").value="";render();});
+$("#export-csv").addEventListener("click",()=>{
+  const rows=[["Date","Title","Category","Amount (INR)"],...filteredExpenses().map(x=>[x.date,x.title,x.category,x.amount])];
+  const csv=rows.map(row=>row.map(value=>'"'+String(value).replace(/"/g,'""')+'"').join(",")).join("\r\n");
+  const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob),link=document.createElement("a");
+  link.href=url;link.download="expense-report-"+($("#month-filter").value||"all-time")+".csv";
+  document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });
 loadExpenses();
