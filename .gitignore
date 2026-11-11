@@ -6,3 +6,8 @@ venv/
 backend/expenses.db
 .DS_Store
 .vscode/
+
+# Local private finance data (never commit)
+migration_backup/
+.env.*
+!.env.example

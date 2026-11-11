@@ -1,6 +1,6 @@
 # Expense Tracker Pro 💸
 
-A responsive full-stack personal finance dashboard built with **Python, Flask, SQLite, HTML, CSS, and JavaScript**.
+A responsive full-stack personal finance dashboard built with **Python, Flask, PostgreSQL (Neon), HTML, CSS, and JavaScript**. SQLite remains available for local development when `DATABASE_URL` is unset.
 
 ## 🌐 Live Demo
 
@@ -25,7 +25,7 @@ A responsive full-stack personal finance dashboard built with **Python, Flask, S
 | --- | --- |
 | Backend | Python, Flask |
 | Frontend | HTML, CSS, JavaScript |
-| Database | SQLite |
+| Database | Neon PostgreSQL (production), SQLite (local fallback) |
 | Production server | Gunicorn |
 | Hosting | Render |
 | CI | GitHub Actions |
@@ -43,7 +43,7 @@ py -m pip install -r backend/requirements.txt
 py backend/app.py
 ```
 
-Open http://127.0.0.1:5000. Configure authentication environment variables required by your version of `backend/app.py` before starting it. Do not commit credentials.
+Open http://127.0.0.1:5000. Before starting the app, set `EXPENSE_APP_PASSWORD` to a private password and `FLASK_SECRET_KEY` to a stable random secret in the local terminal. When `DATABASE_URL` is not set, the application uses a local SQLite database. To develop against PostgreSQL, set `DATABASE_URL` privately using an isolated test database; never copy production credentials into GitHub or screenshots.
 
 ## Run Tests
 
@@ -82,7 +82,9 @@ Mutating endpoints should be accessed through the authenticated interface.
 
 The app is deployed as a Render **Web Service**, not a static site. See [DEPLOYMENT.md](DEPLOYMENT.md) for configuration and security considerations.
 
-**Important:** The default SQLite database lives on the service filesystem. Render instances without persistent storage can lose SQLite data during redeploys or restarts. Use durable storage or migrate to a managed database before relying on the app for real financial records.
+**Production storage:** The live Flask service uses Neon PostgreSQL through Render's secret `DATABASE_URL`. When this setting is absent, the app falls back to SQLite; an ephemeral Render filesystem is not suitable for persistent SQLite storage. The production Postgres setup was verified on 11 November 2026: app tables were present and a sample expense remained available after a Render redeployment and browser refresh.
+
+See [NEON_MIGRATION.md](NEON_MIGRATION.md) for database configuration and safe verification. Expenses can be exported to CSV, but monthly budgets are **not** included in that export. Maintain a separate backup plan for both datasets.
 
 ## Project Roadmap
 
@@ -93,7 +95,7 @@ The app is deployed as a Render **Web Service**, not a static site. See [DEPLOYM
 - [x] Phase 5 — Live demo and portfolio documentation
 - [ ] Verify all final user journeys and budget calculations
 - [ ] Add sanitized application screenshots
-- [ ] Configure durable database storage
+- [x] Configure Neon PostgreSQL for durable production storage
 
 ## Links
 

@@ -31,9 +31,10 @@ Set these privately in your hosting provider's environment/secrets configuration
 - `FLASK_SECRET_KEY`: stable random secret (at least 32 random bytes represented as hex). Keep it stable across restarts.
 - `COOKIE_SECURE=1`: required when served over HTTPS.
 - `FLASK_DEBUG=0`.
-- `EXPENSE_DB_PATH`: full path to SQLite file on a persistent mounted disk.
+- `DATABASE_URL`: pooled Neon PostgreSQL connection URL with TLS, stored privately on Render. This is the production database configuration.
+- `EXPENSE_DB_PATH`: optional SQLite-only database location for local development or a mounted SQLite disk. Not required for Neon.
 
-SQLite on an ephemeral host loses data on restart/redeploy. Configure a persistent volume with backups or migrate to managed PostgreSQL before any serious use.
+The live service uses Neon PostgreSQL, avoiding data loss from Render's ephemeral local SQLite filesystem. Set up separate backups for both expenses and monthly budgets.
 
 ## Deployment
 
@@ -41,23 +42,23 @@ The repo includes `Procfile`, `.python-version`, and `gunicorn`.
 
 - Runtime: Python 3.12, Linux.
 - Build command: `pip install -r backend/requirements.txt`
-- Start command: `gunicorn --chdir backend app:app --bind 0.0.0.0:${PORT:-8000}`
-- Configure environment variables and persistent storage before deploying.
+- Start command: `gunicorn --chdir backend app:app --bind 0.0.0.0:$PORT`
+- Configure required environment variables securely before deploying; the production database is Neon PostgreSQL.
 - Verify HTTPS, login/logout, CSRF rejection, CI status, and data persistence after restart.
 
-**No live hosting has been configured by these commits.** Do not expose personal financial information until these requirements are met.
+**Live deployment:** The `expense-tracker-pro-1` service on Render has Neon `DATABASE_URL` configured. The PostgreSQL-backed deployment and sample expense persistence through a Render redeployment were verified on 11 November 2026. Keep access controls enabled and do not expose personal financial information.
 
-## Persistent database setup on Render
+## Production persistence with Neon PostgreSQL
 
-The application uses SQLite and requires a persistent filesystem for reliable data retention. Render's free web service filesystem is ephemeral, and persistent disks require a paid eligible service. A green deploy alone **does not** confirm persistence.
+The live Flask web service `expense-tracker-pro-1` uses Neon PostgreSQL in database `neondb`, configured through Render's private `DATABASE_URL`. Its code is deployed from `main`, and commits to `main` trigger automatic deployments. The build and start commands are listed above.
 
-1. Before changing anything, export any expenses you need to preserve using the dashboard's **Export CSV** feature. The export is not a full database backup (budgets are not included).
-2. Choose an eligible paid Render web service and attach a persistent disk mounted at `/var/data`, or plan a migration to a managed PostgreSQL database. A Render Postgres database cannot be used by the existing SQLite code without a migration.
-3. On the web service's Environment page, set `EXPENSE_DB_PATH=/var/data/expenses.db`. Keep `FLASK_SECRET_KEY` stable and `COOKIE_SECURE=1`. Do not store secrets in Git.
-4. Deploy. The application now fails clearly if the configured parent directory is missing instead of silently writing somewhere else.
-5. Confirm the disk is attached and backed up. Verify retention through a service restart and redeployment using non-sensitive test data. Do not assume SQLite survives until that test passes.
+1. In Neon, use the `production` branch and the `neondb` database. The `expense_tracker_test` database is reserved for isolated tests and must not be used by the live service.
+2. Keep `DATABASE_URL` in Render's Environment settings as a secret. Prefer Neon's pooled connection URL with `sslmode=require`. Do not copy connection credentials into source code or screenshots.
+3. Keep `EXPENSE_APP_PASSWORD` private and `FLASK_SECRET_KEY` stable; use `COOKIE_SECURE=1` over HTTPS.
+4. A sample expense was verified through the live site, and checked in Neon after a full Render redeployment. Production budget persistence through a redeployment has not yet been verified end-to-end.
+5. Back up both expenses and monthly budgets regularly. The app's CSV export contains expenses only.
 
-**Important:** Setting `EXPENSE_DB_PATH` to `/var/data/expenses.db` without first mounting a disk at `/var/data` will prevent startup. The current free service can remain live with ephemeral storage until you choose a persistence solution.
+When `DATABASE_URL` is absent, the app falls back to SQLite. Render's free web-service filesystem is ephemeral, so this fallback must not be relied upon for production persistence. See [NEON_MIGRATION.md](NEON_MIGRATION.md) for safe verification and database management.
 
 ## Budget calculation definition
 
