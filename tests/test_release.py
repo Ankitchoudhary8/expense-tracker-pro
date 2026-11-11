@@ -90,6 +90,34 @@ class ReleaseVerificationTests(unittest.TestCase):
         self.assertEqual(self.client.post("/api/expenses", json=payload, headers=headers).status_code, 400)
         self.assertEqual(self.client.get("/api/budgets/2026-13").status_code, 400)
 
+    def test_budget_totals_include_all_categories_once(self):
+        self.authenticate()
+        headers = {"X-CSRF-Token": "release-test-token"}
+        for title, category, amount, day in [
+            ("Food purchase", "Food", 20000, "2026-11-10"),
+            ("Bills payment", "Bills", 20000, "2026-11-11"),
+            ("Prior month", "Food", 500, "2026-10-15"),
+        ]:
+            response = self.client.post("/api/expenses", json={
+                "title": title, "category": category, "amount": amount, "date": day
+            }, headers=headers)
+            self.assertEqual(response.status_code, 201)
+        expenses = self.client.get("/api/expenses").get_json()
+        monthly = [x for x in expenses if x["date"].startswith("2026-11")]
+        filtered = [x for x in monthly if x["category"] == "Food"]
+        self.assertEqual(sum(x["amount"] for x in filtered), 20000)
+        self.assertEqual(sum(x["amount"] for x in monthly), 40000)
+        self.assertEqual(self.client.put("/api/budgets/2026-11", json={"amount": 20000}, headers=headers).status_code, 200)
+        self.assertEqual(self.client.get("/api/budgets/2026-11").get_json()["amount"], 20000)
+        self.assertEqual(sum(x["amount"] for x in monthly) - 20000, 20000)
+
+    def test_configured_database_directory_must_exist(self):
+        missing = Path(self.temp.name) / "unmounted-volume" / "expenses.db"
+        with patch.object(database, "DB_PATH", missing):
+            with patch.dict(os.environ, {"EXPENSE_DB_PATH": str(missing)}):
+                with self.assertRaisesRegex(RuntimeError, "Mount persistent storage"):
+                    database.init_db()
+
     def test_security_cookie_configuration(self):
         self.assertTrue(application.app.config["SESSION_COOKIE_HTTPONLY"])
         self.assertEqual(application.app.config["SESSION_COOKIE_SAMESITE"], "Lax")
