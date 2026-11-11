@@ -68,7 +68,8 @@ function render() {
     name.textContent=item.title;detail.textContent=item.category+" • "+item.date;info.append(name,detail);
     const right=document.createElement("div");right.className="right";
     const amount=document.createElement("strong");amount.textContent=money(item.amount);
-    const edit=document.createElement("button");edit.className="edit";edit.textContent="Edit";edit.addEventListener("click",()=>startEdit(item));\n    const button=document.createElement("button");button.className="delete";button.textContent="Delete";
+    const edit=document.createElement("button");edit.className="edit";edit.textContent="Edit";edit.addEventListener("click",()=>startEdit(item));
+    const button=document.createElement("button");button.className="delete";button.textContent="Delete";
     button.addEventListener("click",()=>removeExpense(item.id));right.append(amount,edit,button);row.append(info,right);$("#expenses").append(row);
   });
 }
@@ -92,7 +93,7 @@ $("#expense-form").addEventListener("submit",async event=>{
 });
 $("#month-filter").addEventListener("change",()=>{loadBudget();render();});
 $("#category-filter").addEventListener("change",render);
-$("#clear-filters").addEventListener("click",()=>{$("#month-filter").value="";$("#category-filter").value="";render();});
+$("#clear-filters").addEventListener("click",()=>{$("#month-filter").value="";$("#category-filter").value="";loadBudget();render();});
 $("#export-csv").addEventListener("click",()=>{
   const rows=[["Date","Title","Category","Amount (INR)"],...filteredExpenses().map(x=>[x.date,x.title,x.category,x.amount])];
   const csv=rows.map(row=>row.map(value=>'"'+String(value).replace(/"/g,'""')+'"').join(",")).join("\r\n");
