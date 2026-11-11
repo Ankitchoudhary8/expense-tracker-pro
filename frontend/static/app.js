@@ -3,7 +3,7 @@ const money = value => new Intl.NumberFormat("en-IN", {style:"currency", currenc
 const compact = value => new Intl.NumberFormat("en-IN", {notation:"compact", maximumFractionDigits:1}).format(value);
 const palette = ["#3657b7","#5f82e8","#25a69a","#f4aa4a","#8b65ce","#e67d89"];
 const categories = ["Food","Transport","Shopping","Bills","Education","Other"];
-let allExpenses = [];
+let allExpenses = [];\nlet editingId = null;\nlet activeBudget = null;
 const localToday = () => {const d = new Date(); return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");};
 $("#date").value = localToday();
 $("#month-filter").value = localToday().slice(0,7);
@@ -57,7 +57,7 @@ function render() {
   const items=filteredExpenses(), sum=items.reduce((s,x)=>s+x.amount,0);
   $("#total").textContent=money(sum);$("#count").textContent=String(items.length);$("#average").textContent=money(items.length?sum/items.length:0);
   $("#results-label").textContent=items.length+" transaction"+(items.length===1?"":"s");
-  drawCategoryChart(items);drawMonthlyChart();
+  drawCategoryChart(items);drawMonthlyChart();renderBudget();
   $("#expenses").replaceChildren();
   if(!items.length){const p=document.createElement("p");p.className="empty";p.textContent="No expenses match your filters.";$("#expenses").append(p);}
   items.forEach(item=>{
@@ -66,8 +66,8 @@ function render() {
     name.textContent=item.title;detail.textContent=item.category+" • "+item.date;info.append(name,detail);
     const right=document.createElement("div");right.className="right";
     const amount=document.createElement("strong");amount.textContent=money(item.amount);
-    const button=document.createElement("button");button.className="delete";button.textContent="Delete";
-    button.addEventListener("click",()=>removeExpense(item.id));right.append(amount,button);row.append(info,right);$("#expenses").append(row);
+    const edit=document.createElement("button");edit.className="edit";edit.textContent="Edit";edit.addEventListener("click",()=>startEdit(item));\n    const button=document.createElement("button");button.className="delete";button.textContent="Delete";
+    button.addEventListener("click",()=>removeExpense(item.id));right.append(amount,edit,button);row.append(info,right);$("#expenses").append(row);
   });
 }
 async function loadExpenses(){
@@ -83,12 +83,12 @@ async function removeExpense(id){
 $("#expense-form").addEventListener("submit",async event=>{
   event.preventDefault();$("#message").textContent="";
   const payload={title:$("#title").value.trim(),amount:Number($("#amount").value),category:$("#category").value,date:$("#date").value};
-  try{const response=await fetch("/api/expenses",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+  try{const response=await fetch(editingId===null?"/api/expenses":"/api/expenses/"+editingId,{method:editingId===null?"POST":"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
     const result=await response.json();if(!response.ok)throw Error(result.error||"Could not add expense.");
-    $("#expense-form").reset();$("#date").value=localToday();await loadExpenses();
+    resetEdit();await loadExpenses();
   }catch(error){$("#message").textContent=error.message;}
 });
-$("#month-filter").addEventListener("change",render);
+$("#month-filter").addEventListener("change",()=>{loadBudget();render();});
 $("#category-filter").addEventListener("change",render);
 $("#clear-filters").addEventListener("click",()=>{$("#month-filter").value="";$("#category-filter").value="";render();});
 $("#export-csv").addEventListener("click",()=>{
@@ -100,3 +100,51 @@ $("#export-csv").addEventListener("click",()=>{
   document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });
 loadExpenses();
+
+function resetEdit(){
+  editingId=null;$("#expense-form").reset();$("#date").value=localToday();
+  $("#expense-form-heading").textContent="Add an expense";$("#submit-expense").textContent="Add expense";
+  $("#cancel-edit").hidden=true;
+}
+function startEdit(item){
+  editingId=item.id;$("#title").value=item.title;$("#amount").value=item.amount;
+  $("#category").value=item.category;$("#date").value=item.date;
+  $("#expense-form-heading").textContent="Edit expense";$("#submit-expense").textContent="Save changes";
+  $("#cancel-edit").hidden=false;$("#expense-form").scrollIntoView({behavior:"smooth",block:"center"});
+}
+$("#cancel-edit").addEventListener("click",resetEdit);
+function budgetMonth(){return $("#month-filter").value || localToday().slice(0,7);}
+async function loadBudget(){
+  const month=budgetMonth();
+  $("#budget-month-label").textContent=month;
+  try{
+    const response=await fetch("/api/budgets/"+month);
+    if(!response.ok)throw Error("Could not load budget.");
+    const result=await response.json();
+    if(month!==budgetMonth())return;
+    activeBudget=result.amount;
+    $("#budget-amount").value=activeBudget??"";
+    renderBudget();
+  }catch(error){$("#budget-warning").textContent=error.message;}
+}
+function renderBudget(){
+  const month=budgetMonth();
+  const spent=allExpenses.filter(x=>x.date.startsWith(month)).reduce((sum,x)=>sum+x.amount,0);
+  const limit=activeBudget;
+  const ratio=limit?spent/limit:0;
+  $("#budget-status").textContent=limit?money(spent)+" of "+money(limit)+" used":"No budget set for "+month;
+  $("#budget-remaining").textContent=limit?(spent>limit?money(spent-limit)+" over budget":money(limit-spent)+" remaining"):"";
+  $("#budget-progress").style.width=Math.min(100,ratio*100)+"%";
+  $("#budget-progress").classList.toggle("over",!!limit&&spent>limit);
+  $("#budget-warning").textContent=limit&&spent>limit?"⚠ You have exceeded your monthly budget.":limit&&ratio>=0.8?"You have used at least 80% of your budget.":"";
+}
+$("#budget-form").addEventListener("submit",async event=>{
+  event.preventDefault();
+  const month=budgetMonth(),amount=Number($("#budget-amount").value);
+  try{
+    const response=await fetch("/api/budgets/"+month,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({amount})});
+    const result=await response.json();if(!response.ok)throw Error(result.error||"Could not save budget.");
+    activeBudget=result.amount;renderBudget();
+  }catch(error){$("#budget-warning").textContent=error.message;}
+});
+loadBudget();
