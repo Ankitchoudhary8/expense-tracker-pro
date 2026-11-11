@@ -5,10 +5,10 @@
   <title>Expense Tracker Pro | Dashboard</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <script src="{{ url_for('static', filename='app.js') }}" defer></script>
-</head>
+<meta name="csrf-token" content="{{ csrf_token }}"></head>
 <body>
 <main class="container">
-  <header class="topbar"><div><p class="eyebrow">PERSONAL FINANCE DASHBOARD</p><h1>Expense Tracker Pro</h1><p>Understand where your money goes.</p></div><span class="tag">Phase 3</span></header>
+  <header class="topbar"><div><p class="eyebrow">PERSONAL FINANCE DASHBOARD</p><h1>Expense Tracker Pro</h1><p>Understand where your money goes.</p></div><form action="/logout" method="post" style="display:block"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="secondary">Sign out</button></form></header>
   <section class="filters panel" aria-label="Report filters">
     <label>Month <input type="month" id="month-filter"></label>
     <label>Category <select id="category-filter"><option value="">All categories</option><option>Food</option><option>Transport</option><option>Shopping</option><option>Bills</option><option>Education</option><option>Other</option></select></label>
