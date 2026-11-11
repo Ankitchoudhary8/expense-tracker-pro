@@ -7,6 +7,12 @@
 - [x] GitHub Actions CI previously shown passing
 - [x] README updated with live demo and portfolio description
 
+## Automated verification added
+
+- [x] Added isolated regression tests in `tests/test_release.py` for login/logout, CSRF, expense CRUD, database readback, month-specific budgets, and invalid inputs
+- [ ] Confirm the latest GitHub Actions run is green (tests have been committed but execution result is not yet confirmed)
+- [ ] Confirm production data survives a service restart/redeploy (not tested; default SQLite storage is ephemeral)
+
 ## Manual checks still required
 
 - [ ] Sign in and sign out
