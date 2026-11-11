@@ -1,4 +1,5 @@
 """Basic API smoke tests. Run: python -m unittest discover -s tests"""
+import os
 import sys
 import tempfile
 import unittest
@@ -17,10 +18,21 @@ class ExpenseAPITests(unittest.TestCase):
         database.init_db()
         import app
         self.client = app.app.test_client()
+        with self.client.session_transaction() as sess:
+            sess["authenticated"] = True
+            sess["csrf_token"] = "test-csrf"
+        self.client.environ_base["HTTP_X_CSRF_TOKEN"] = "test-csrf"
 
     def tearDown(self):
         self.db_patch.stop()
         self.temp.cleanup()
+
+    def test_unauthorized_requests_blocked(self):
+        import app
+        anonymous = app.app.test_client()
+        self.assertEqual(anonymous.get("/api/expenses").status_code, 401)
+        self.assertEqual(anonymous.post("/api/expenses", json={}).status_code, 401)
+        self.assertEqual(self.client.post("/api/expenses", json={}, headers={"X-CSRF-Token": "wrong"}).status_code, 403)
 
     def test_create_list_delete(self):
         response = self.client.post("/api/expenses", json={
