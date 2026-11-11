@@ -1,7 +1,11 @@
 from datetime import date
 import math
+import os
+import secrets
+import hmac
+from datetime import timedelta
 from pathlib import Path
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, session, redirect, url_for
 from database import get_connection, init_db
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -10,11 +14,55 @@ app = Flask(
     template_folder=str(BASE_DIR.parent / "frontend" / "templates"),
     static_folder=str(BASE_DIR.parent / "frontend" / "static"),
 )
+app.config.update(
+    SECRET_KEY=os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32),
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.environ.get("COOKIE_SECURE", "0") == "1",
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=8),
+)
 init_db()
+
+@app.before_request
+def protect_api():
+    if request.path.startswith("/api/") and not session.get("authenticated"):
+        return jsonify({"error": "Authentication required."}), 401
+    if request.path.startswith("/api/") and request.method not in ("GET", "HEAD", "OPTIONS"):
+        token = request.headers.get("X-CSRF-Token", "")
+        if not token or not hmac.compare_digest(token, session.get("csrf_token", "")):
+            return jsonify({"error": "Invalid CSRF token."}), 403
+
+@app.get("/login")
+def login_page():
+    if session.get("authenticated"):
+        return redirect(url_for("home"))
+    return render_template("login.html")
+
+@app.post("/login")
+def login():
+    password = os.environ.get("EXPENSE_APP_PASSWORD", "")
+    supplied = request.form.get("password", "")
+    if not password:
+        return render_template("login.html", error="App password is not configured on this server."), 503
+    if not hmac.compare_digest(supplied, password):
+        return render_template("login.html", error="Incorrect password."), 401
+    session.clear()
+    session["authenticated"] = True
+    session["csrf_token"] = secrets.token_urlsafe(32)
+    session.permanent = True
+    return redirect(url_for("home"))
+
+@app.post("/logout")
+def logout():
+    if not session.get("authenticated") or not hmac.compare_digest(request.form.get("csrf_token", ""), session.get("csrf_token", "")):
+        return jsonify({"error": "Forbidden"}), 403
+    session.clear()
+    return redirect(url_for("login_page"))
+
 
 @app.get("/")
 def home():
-    return render_template("index.html")
+    if not session.get("authenticated"):\n        return redirect(url_for("login_page"))\n    return render_template("index.html", csrf_token=session["csrf_token"])
 
 @app.get("/api/expenses")
 def list_expenses():
@@ -113,4 +161,4 @@ def set_budget(month):
     return jsonify({"month": month, "amount": amount})
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=os.environ.get("FLASK_DEBUG", "0") == "1")
