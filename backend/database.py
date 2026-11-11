@@ -1,8 +1,9 @@
+import os
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 
-DB_PATH = Path(__file__).resolve().parent / "expenses.db"
+DB_PATH = Path(os.environ.get("EXPENSE_DB_PATH", str(Path(__file__).resolve().parent / "expenses.db")))
 
 @contextmanager
 def get_connection():
