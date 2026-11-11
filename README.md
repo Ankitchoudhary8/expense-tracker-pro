@@ -48,9 +48,10 @@ The dashboard charts and CSV export are computed in the browser from the API dat
 - [x] Phase 1: Flask API, SQLite and expense entry
 - [x] Phase 2: Dashboard, category chart, monthly report and CSV export
 - [x] Phase 3: Expense editing, monthly budgets, alerts and API tests
-- [ ] Phase 4: Deployment and CI/CD
+- [x] Phase 4: CI and deployment configuration
+- [ ] Production launch: authentication, durable storage, and live hosting
 
-**Development only:** Flask's built-in debug server is not intended for production use.
+**Deployment status:** CI and production-server configuration are committed; no public site has been launched. The current app has **no authentication**, so do not expose real financial records on a public URL. See [DEPLOYMENT.md](DEPLOYMENT.md) for security and storage requirements.\n\n[GitHub Actions CI](https://github.com/Ankitchoudhary8/expense-tracker-pro/actions) runs API tests and syntax checks on pushes and pull requests.
 
 ## Run tests
 ```powershell
