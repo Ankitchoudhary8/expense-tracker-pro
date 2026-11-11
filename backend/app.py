@@ -62,7 +62,9 @@ def logout():
 
 @app.get("/")
 def home():
-    if not session.get("authenticated"):\n        return redirect(url_for("login_page"))\n    return render_template("index.html", csrf_token=session["csrf_token"])
+    if not session.get("authenticated"):
+        return redirect(url_for("login_page"))
+    return render_template("index.html", csrf_token=session["csrf_token"])
 
 @app.get("/api/expenses")
 def list_expenses():
