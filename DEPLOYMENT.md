@@ -1,33 +1,48 @@
-# Deployment guide
+# Security and deployment preparation
 
-## Important security and storage limitations
+## Local setup (PowerShell)
 
-**Do not publish this application with real financial data yet.** The current API has no authentication: anyone who knows the public URL can view, add, edit, and delete the expenses and budgets stored by the application. A production release requires authentication and authorization.
+Stop the Flask server, then run:
 
-SQLite is stored on the server filesystem. On many free or ephemeral hosting plans, data may disappear after redeploys/restarts. Use a persistent disk mounted at a configured location, or migrate to a managed database before storing valuable data. Never commit a real `expenses.db` file.
-
-## Production-ready server command
-
-The repository includes `gunicorn` in requirements and a `Procfile`:
-
-```sh
-gunicorn --chdir backend app:app --bind 0.0.0.0:${PORT:-8000}
+```powershell
+git pull origin main
+$env:EXPENSE_APP_PASSWORD = "replace-with-a-long-unique-password"
+$env:FLASK_SECRET_KEY = py -c "import secrets; print(secrets.token_hex(32))"
+py -m unittest discover -s tests -v
+py backend/app.py
 ```
 
-Use a Linux Python web service with Python 3.12. Configure its start command to the command above. Install dependencies with:
+Open http://127.0.0.1:5000 and sign in with your password. The variables above last only for the current PowerShell terminal session. Do not paste passwords into chat or commit them to Git.
 
-```sh
-pip install -r backend/requirements.txt
-```
+## Security controls
 
-## Deployment checklist
+- All expense and budget API endpoints require an authenticated session.
+- State-changing API requests require a per-session CSRF token.
+- Session cookies are HTTP-only and SameSite=Lax.
+- Flask debug mode is off by default.
+- Logout invalidates the session.
+- Single shared password only: this is **not** a multi-user product, has no rate limiting, and is not suitable for storing sensitive financial data on an open public host without additional hardening.
 
-1. Confirm the GitHub Actions CI workflow passes.
-2. Implement user authentication and restrict all expense and budget API endpoints before any public release.
-3. Configure a persistent storage volume or migrate to PostgreSQL.
-4. Set `EXPENSE_DB_PATH` to a writable path on persistent storage if using SQLite.
-5. Set `FLASK_DEBUG=0` and run Gunicorn (never use Flask's development server publicly).
-6. Configure HTTPS, secrets, backups, and error monitoring.
-7. Deploy from GitHub through your chosen host's dashboard and verify health and data persistence.
+## Production environment variables
 
-No live service is deployed by committing these files alone.
+Set these privately in your hosting provider's environment/secrets configuration:
+
+- `EXPENSE_APP_PASSWORD`: long, unique password, never committed to Git.
+- `FLASK_SECRET_KEY`: stable random secret (at least 32 random bytes represented as hex). Keep it stable across restarts.
+- `COOKIE_SECURE=1`: required when served over HTTPS.
+- `FLASK_DEBUG=0`.
+- `EXPENSE_DB_PATH`: full path to SQLite file on a persistent mounted disk.
+
+SQLite on an ephemeral host loses data on restart/redeploy. Configure a persistent volume with backups or migrate to managed PostgreSQL before any serious use.
+
+## Deployment
+
+The repo includes `Procfile`, `.python-version`, and `gunicorn`.
+
+- Runtime: Python 3.12, Linux.
+- Build command: `pip install -r backend/requirements.txt`
+- Start command: `gunicorn --chdir backend app:app --bind 0.0.0.0:${PORT:-8000}`
+- Configure environment variables and persistent storage before deploying.
+- Verify HTTPS, login/logout, CSRF rejection, CI status, and data persistence after restart.
+
+**No live hosting has been configured by these commits.** Do not expose personal financial information until these requirements are met.
