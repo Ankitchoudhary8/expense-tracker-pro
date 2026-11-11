@@ -11,6 +11,7 @@ const categories = ["Food","Transport","Shopping","Bills","Education","Other"];
 let allExpenses = [];
 let editingId = null;
 let activeBudget = null;
+let loadedBudgetMonth = null;
 const localToday = () => {const d = new Date(); return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");};
 $("#date").value = localToday();
 $("#month-filter").value = localToday().slice(0,7);
@@ -125,12 +126,16 @@ function budgetMonth(){return $("#month-filter").value || localToday().slice(0,7
 async function loadBudget(){
   const month=budgetMonth();
   $("#budget-month-label").textContent=month;
+  loadedBudgetMonth = null;
+  activeBudget = null;
+  renderBudget();
   try{
     const response=await secureFetch("/api/budgets/"+month);
     if(!response.ok)throw Error("Could not load budget.");
     const result=await response.json();
     if(month!==budgetMonth())return;
     activeBudget=result.amount;
+    loadedBudgetMonth=month;
     $("#budget-amount").value=activeBudget??"";
     renderBudget();
   }catch(error){$("#budget-warning").textContent=error.message;}
@@ -138,9 +143,9 @@ async function loadBudget(){
 function renderBudget(){
   const month=budgetMonth();
   const spent=allExpenses.filter(x=>x.date.startsWith(month)).reduce((sum,x)=>sum+x.amount,0);
-  const limit=activeBudget;
+  const limit=loadedBudgetMonth===month ? activeBudget : null;
   const ratio=limit?spent/limit:0;
-  $("#budget-status").textContent=limit?money(spent)+" of "+money(limit)+" used":"No budget set for "+month;
+  $("#budget-status").textContent=limit?money(spent)+" of "+money(limit)+" used (all categories)":"No budget set for "+month+" (all categories)";
   $("#budget-remaining").textContent=limit?(spent>limit?money(spent-limit)+" over budget":money(limit-spent)+" remaining"):"";
   $("#budget-progress").style.width=Math.min(100,ratio*100)+"%";
   $("#budget-progress").classList.toggle("over",!!limit&&spent>limit);
@@ -152,7 +157,7 @@ $("#budget-form").addEventListener("submit",async event=>{
   try{
     const response=await secureFetch("/api/budgets/"+month,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({amount})});
     const result=await response.json();if(!response.ok)throw Error(result.error||"Could not save budget.");
-    activeBudget=result.amount;renderBudget();
+    if(month===budgetMonth()){activeBudget=result.amount;loadedBudgetMonth=month;renderBudget();}
   }catch(error){$("#budget-warning").textContent=error.message;}
 });
 loadBudget();
