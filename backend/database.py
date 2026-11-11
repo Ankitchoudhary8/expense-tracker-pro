@@ -20,4 +20,10 @@ def init_db():
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS budgets (
+                month TEXT PRIMARY KEY,
+                amount REAL NOT NULL CHECK(amount > 0)
+            )
+        """)
         connection.commit()
