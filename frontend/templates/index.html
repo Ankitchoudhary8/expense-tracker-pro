@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Expense Tracker Pro</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</head>
+<body>
+  <main class="container">
+    <header><h1>Expense Tracker Pro</h1><p>Track your spending in one place.</p></header>
+    <section class="summary"><span>Total expenses</span><strong id="total">₹0.00</strong></section>
+    <section class="panel">
+      <h2>Add an expense</h2>
+      <form id="expense-form">
+        <label>Title <input id="title" maxlength="120" required placeholder="e.g. Groceries"></label>
+        <label>Amount (₹) <input id="amount" type="number" min="0.01" step="0.01" required placeholder="0.00"></label>
+        <label>Category <select id="category" required><option value="Food">Food</option><option value="Transport">Transport</option><option value="Shopping">Shopping</option><option value="Bills">Bills</option><option value="Education">Education</option><option value="Other">Other</option></select></label>
+        <label>Date <input id="date" type="date" required></label>
+        <button type="submit">Add expense</button>
+      </form>
+      <p id="message" role="status"></p>
+    </section>
+    <section class="panel"><h2>Recent expenses</h2><div id="expenses" aria-live="polite"></div></section>
+  </main>
+</body>
+</html>
