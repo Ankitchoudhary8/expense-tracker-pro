@@ -33,6 +33,24 @@ class ExpenseAPITests(unittest.TestCase):
         self.assertEqual(self.client.delete(f"/api/expenses/{expense_id}").status_code, 200)
         self.assertEqual(self.client.get("/api/expenses").get_json(), [])
 
+    def test_edit_expense(self):
+        payload = {"title": "Lunch", "amount": 150, "category": "Food", "date": "2026-11-11"}
+        created = self.client.post("/api/expenses", json=payload)
+        expense_id = created.get_json()["id"]
+        payload["amount"] = 250
+        response = self.client.put(f"/api/expenses/{expense_id}", json=payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["amount"], 250)
+        self.assertEqual(self.client.put("/api/expenses/999", json=payload).status_code, 404)
+
+    def test_monthly_budget(self):
+        self.assertIsNone(self.client.get("/api/budgets/2026-11").get_json()["amount"])
+        response = self.client.put("/api/budgets/2026-11", json={"amount": 5000})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client.get("/api/budgets/2026-11").get_json()["amount"], 5000)
+        self.assertEqual(self.client.put("/api/budgets/2026-11", json={"amount": -1}).status_code, 400)
+        self.assertEqual(self.client.put("/api/budgets/2026-13", json={"amount": 100}).status_code, 400)
+
     def test_reject_invalid_expense(self):
         response = self.client.post("/api/expenses", json={
             "title": "Invalid", "amount": -1, "category": "Food", "date": "2026-11-11"
